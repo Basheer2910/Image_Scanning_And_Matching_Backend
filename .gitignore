@@ -1,0 +1,39 @@
+# Node.js dependencies
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+package-lock.json
+
+# Python virtual environment
+venv/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Logs and temp files
+logs/
+*.log
+debug.log
+*.swp
+*.swo
+.DS_Store
+
+# Environment variables
+.env
+
+# Compiled files
+*.out
+*.exe
+
+# Python cache and metadata
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Jupyter notebooks checkpoints (if applicable)
+.ipynb_checkpoints/
+
+# Miscellaneous
+.idea/
+.vscode/
