@@ -43,11 +43,16 @@ app.post('/process-images', upload.fields([
 
         console.log("Processing uploaded student and answer key images...");
 
-        const studentAnswer = await runSegmentScript('segment_model.py', [studentImagePath, 'segments', 'AnswerSheet']);
-        const key = await runSegmentScript('segment_model.py', [answerKeyPath, 'segments', 'AnswerKey']);
-        console.log("🚀 ~ ]), ~ reslt:", studentAnswer)
+        // const studentAnswer = await runSegmentScript('segment_model.py', [studentImagePath, 'segments', 'AnswerSheet']);
+        // const key = await runOCRPrintedModel('ocr_printed_model.py', [answerKeyPath]);
+        const [studentAnswer, key] = await Promise.all([
+            runSegmentScript('segment_model.py', [studentImagePath, 'segments', 'AnswerSheet']),
+            runOCRPrintedModel('ocr_printed_model.py', [answerKeyPath])
+        ]);
+        
+        const score = await runSimilarityCheckerModel('similarity_checker_model.py', [studentAnswer, key]);
         console.log("going to return")
-        return res.json({ data: {studentAnswer, key} });
+        return res.json({ data: {score} });
         
     } catch (error) {
         console.error(error);
@@ -55,7 +60,7 @@ app.post('/process-images', upload.fields([
     }
 });
 
-function runOCRModel(script, args, i, sentences) {
+function runOCRHandwrittenModel(script, args, i, sentences) {
     return new Promise((resolve, reject) => {
         const scriptPath = path.join(__dirname, 'models', script);
         const absoluteArgs = [path.resolve(args[0])];
@@ -98,7 +103,63 @@ function runSegmentScript(script, args) {
         let result;
 
         process.stdout.on('data', (data) => {
-            result=Number(data.toString());
+            result = Number(data.toString());
+        });
+
+        process.stderr.on('data', (data) => {
+            console.error(`Error in ${script}:`, data.toString());
+        });
+
+        process.on('close', async (code) => {
+            if (code !== 0) {
+                return reject(`Process exited with code ${code}`);
+            }
+
+            if (result === 0) return resolve("");
+
+            let sentences = Array(result).fill("");
+            let batchSize = 5;
+            let index = 0;
+
+            async function processBatch() {
+                if (index >= result) {
+                    return resolve(sentences.join(" "));
+                }
+
+                let batch = [];
+                for (let j = index; j < Math.min(index + batchSize, result); j++) {
+                    batch.push(runOCRHandwrittenModel('ocr_handwritten_model.py', [`segments/${args[2]}${j}.png`], j, sentences));
+                }
+
+                try {
+                    await Promise.all(batch);
+                    index += batchSize;
+                    processBatch(); // Process next batch
+                } catch (error) {
+                    reject(error);
+                }
+            }
+
+            processBatch(); // Start batch processing
+        });
+    });
+}
+
+function runOCRPrintedModel(script, args) {
+    return new Promise((resolve, reject) => {
+        const scriptPath = path.join(__dirname, 'models', script);
+        const absoluteArgs = [path.resolve(args[0])];
+
+        console.log(`Running script: ${scriptPath} with args:`, absoluteArgs);
+
+        const process = spawn('python', [scriptPath, ...absoluteArgs]);
+
+        let result = "";
+
+        process.stdout.on('data', (data) => {
+            let text = data.toString();
+            console.log("🚀 ~ process.stdout.on ~ text:", text)
+            text.slice(0,6) === 'text: ' ? result = text.slice(5) : "";
         });
 
         process.stderr.on('data', (data) => {
@@ -107,26 +168,43 @@ function runSegmentScript(script, args) {
 
         process.on('close', (code) => {
             if (code === 0) {
-                if (result == 0) return resolve("");
-        
-                let sentences = Array(result).fill("");
-                let promises = [];
-                
-                for (let i = 0; i < result; i++) {
-                    promises.push(runOCRModel('ocr_model.py', [`segments/${args[2]}${i}.png`], i, sentences));
-                }
-                
-                Promise.all(promises)
-                    .then(() => resolve(sentences.join(" ")))
-                    .catch(reject); // Ensure rejections are handled
+                resolve(result);
             } else {
                 reject(`Process exited with code ${code}`);
             }
         });
-        
     });
 }
+function runSimilarityCheckerModel(script, args) {
+    return new Promise((resolve, reject) => {
+        const scriptPath = path.join(__dirname, 'models', script);
+        const absoluteArgs = [path.resolve(args[0]), path.resolve(args[1])];
 
+        console.log(`Running script: ${scriptPath} with args:`, absoluteArgs);
+
+        const process = spawn('python', [scriptPath, ...absoluteArgs]);
+
+        let result = "";
+
+        process.stdout.on('data', (data) => {
+            let text = data.toString();
+            console.log("🚀 ~ process.stdout.on ~ text:", text)
+            text.slice(0,7) === 'score: ' ? result = text.substring(7, text.length-2) : "";
+        });
+
+        process.stderr.on('data', (data) => {
+            console.error(`Error in ${script}:`, data.toString());
+        });
+
+        process.on('close', (code) => {
+            if (code === 0) {
+                resolve(result);
+            } else {
+                reject(`Process exited with code ${code}`);
+            }
+        });
+    });
+}
 app.listen(port, () => {
     console.log(`Server running on http://localhost:${port}`);
 });
