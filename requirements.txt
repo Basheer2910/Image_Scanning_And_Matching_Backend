@@ -1,0 +1,14 @@
+pytesseract
+tesseract
+opencv-python
+numpy
+torch
+transformers
+Pillow
+sentence-transformers
+symspellpy
+pkg_resources
+matplotlib
+shapely
+ultralytics
+huggingface_hub
