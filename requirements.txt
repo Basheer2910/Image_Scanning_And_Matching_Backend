@@ -12,3 +12,4 @@ matplotlib
 shapely
 ultralytics
 huggingface_hub
+moondream
