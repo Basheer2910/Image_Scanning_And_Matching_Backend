@@ -1,15 +1,29 @@
-pytesseract
-tesseract
+# Core Dependencies
+Flask
+flask-cors
+flask[async]
+Werkzeug
+
+# AI and OCR Models
 opencv-python
-numpy
-torch
-transformers
+pytesseract
 Pillow
+numpy  # Compatible with all dependencies
+scipy # Compatible with NumPy 1.23.0
 sentence-transformers
+transformers
+moondream  # Avoids NumPy 2.x dependency
+
+# NLP and Similarity Check
 symspellpy
-pkg_resources
-matplotlib
-shapely
-ultralytics
-huggingface_hub
-moondream
+torch
+torchvision
+scikit-learn  # Requires NumPy <2.0
+
+# PDF Processing
+pdf2image
+poppler-utils
+
+# Miscellaneous
+shutilwhich
+asyncio

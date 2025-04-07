@@ -6,7 +6,7 @@ yarn-error.log*
 package-lock.json
 
 # Python virtual environment
-venv/
+# venv/
 __pycache__/
 *.pyc
 *.pyo
