@@ -83,8 +83,8 @@ def process_images():
         score_output = run_model('similarity_checker_model.py', [student_answer, answer_key])
         if not score_output or not score_output.startswith("score:"):
             return jsonify({'error': 'Error comparing answers.'}), 500
-
-        score = score_output[7:-2]  # Trimming format
+        print("Score output:", score_output)
+        score = int(score_output.split("**")[1].split('/')[0])  # Trimming format
 
         # Clean up
         shutil.rmtree(UPLOAD_FOLDER, ignore_errors=True)
@@ -96,8 +96,8 @@ def process_images():
         return jsonify({
             'data': {
                 'score': score,
-                'student_answer': student_answer[:300],
-                'answer_key': answer_key[6:300]
+                'student_answer': student_answer[6:],
+                'answer_key': answer_key[6:]
             }
         })
 
